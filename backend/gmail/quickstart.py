@@ -6,20 +6,36 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import datetime
+import base64
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
-def get_emails_start_of_month(service):
+def list_emails_start_of_month(service):
   # Calculate current month
   first_date = datetime.date.today().replace(day=1).strftime('%Y/%m/%d')
   # Currently only supporting SEEK emails
   seek_query = f'from:noreply@s.seek.com.au subject:Your application was successfully submitted after:{first_date}'
-
+  # Retreive full message payload
   result = service.users().messages().list(userId = 'me', q = seek_query).execute()
-  messages = result.get('messages', [])
+  payload = result.get('messages', [])
 
-  return messages
+  return payload
+
+def filter_body(payload):
+  if payload.get('mimeType') == 'text/html':
+    return payload.get('body', {}).get('data')
+
+  if 'parts' in payload:
+    for sub_part in payload['parts']:
+      html_data = filter_body(sub_part)
+      if html_data:
+        return html_data
+  return None
+
+def decode_html(b64_html):
+  decoded_bytes = base64.urlsafe_b64decode(b64_html.encode('ASCII'))
+  return decoded_bytes.decode('utf-8')
 
 def main():
   """Shows basic usage of the Gmail API.
@@ -46,20 +62,37 @@ def main():
 
   try:
 
-    # Call the Gmail API
+    # Retreive list of emails, get content for each email, and decode into HTML
     service = build("gmail", "v1", credentials=creds)
-    messages = get_emails_start_of_month(service)
-    if not messages:
+
+    payload = list_emails_start_of_month(service)
+
+    if not payload:
         print("No messages found.")
         return
 
-    print("Messages:")
-    for message in messages:
-        print(f'Message ID: {message["id"]}')
-        msg = (
-            service.users().messages().get(userId="me", id=message["id"]).execute()
-        )
-        print(f'  Subject: {msg["snippet"]}')
+    html_documents = []
+
+    for email in payload:
+      email_id = email['id']
+
+      full_email = service.users().messages().get(userId='me', id = email_id, format = 'full').execute()
+
+      b64_html = filter_body(full_email.get('payload', {}))
+
+      if b64_html:
+        html_content = decode_html(b64_html)
+
+        html_documents.append({
+          'id': email_id,
+          'html': html_content
+        })
+
+        print(f'Retrieved HTML for email id: {email_id}')
+
+      else:
+        print(f'Email {email_id} did not contain a text/html part')
+
 
   except HttpError as error:
     # TODO(developer) - Handle errors from gmail API.
