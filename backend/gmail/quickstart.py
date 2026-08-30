@@ -7,6 +7,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import datetime
 import base64
+from email_to_pdf import convert_email_to_pdf
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
@@ -88,8 +89,8 @@ def main():
           'html': html_content
         })
 
-        print(f'Retrieved HTML for email id: {email_id}')
-
+        # Convert it to pdf and store it in local file system straight away
+        convert_email_to_pdf(email_id, html_content)
       else:
         print(f'Email {email_id} did not contain a text/html part')
 
