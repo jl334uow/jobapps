@@ -9,7 +9,7 @@ import datetime
 import base64
 from email_to_pdf import convert_email_to_pdf
 from pathlib import Path
-
+from extract_job_posting import extract_seek_job_url, job_posting_to_pdf
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
@@ -77,9 +77,13 @@ def main():
 
     # Creates subfolder to store PDF if not exists already
     month_year = datetime.date.today().strftime('%m-%Y')
-    subfolder = Path(f'pdfs/{month_year}')
+    subfolder = Path(f'pdfs/{month_year}/')
     if not subfolder.is_dir():
       Path(f'pdfs/{month_year}').mkdir(parents = True, exist_ok = True)
+
+    job_postings = Path(f'pdfs/{month_year}/job_postings/')
+    if not job_postings.is_dir():
+        Path(f'pdfs/{month_year}/job_postings').mkdir(parents = True, exist_ok = True)
 
     for email in payload:
       email_id = email['id']
@@ -107,6 +111,10 @@ def main():
         })
         # Convert it to pdf and store it in local file system straight away
         convert_email_to_pdf(email_id, html_content, subfolder)
+
+        # Retreive job posting from website
+        url = extract_seek_job_url(html_content)
+        job_posting_to_pdf(email_id, url, job_postings)
       else:
         print(f'Email {email_id} did not contain a text/html part')
 
