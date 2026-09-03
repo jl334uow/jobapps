@@ -89,34 +89,35 @@ def main():
       email_id = email['id']
 
       # Check if PDF already exists in our local file system
-      # Scenario 1: No folder + no file -- continue
-      # Scenario 2: Folder + no file --> continue
-      # Scenario 3: Folder + file --> skip
       file = Path(f'{subfolder}/{email_id}.pdf')
       if file.exists():
         print(f'PDF already exists: {file}')
         continue
-
-
-      full_email = service.users().messages().get(userId='me', id = email_id, format = 'full').execute()
-
-      b64_html = filter_body(full_email.get('payload', {}))
-
-      if b64_html:
-        html_content = decode_html(b64_html)
-
-        html_documents.append({
-          'id': email_id,
-          'html': html_content
-        })
-        # Convert it to pdf and store it in local file system straight away
-        convert_email_to_pdf(email_id, html_content, subfolder)
-
-        # Retreive job posting from website
-        url = extract_seek_job_url(html_content)
-        job_posting_to_pdf(email_id, url, job_postings)
       else:
-        print(f'Email {email_id} did not contain a text/html part')
+        full_email = service.users().messages().get(userId='me', id = email_id, format = 'full').execute()
+
+        b64_html = filter_body(full_email.get('payload', {}))
+
+        if b64_html:
+          html_content = decode_html(b64_html)
+
+          html_documents.append({
+            'id': email_id,
+            'html': html_content
+          })
+          # Convert it to pdf and store it in local file system straight away
+          convert_email_to_pdf(email_id, html_content, subfolder)
+        else:
+          print(f'Email {email_id} did not contain a text/html part')
+        # Job ad processing
+        job_ad = Path(f'{subfolder}/job_postings/{email_id}.pdf')
+        if job_ad.exists():
+          print(f'Job posting already exists: {job_ad}')
+          continue
+        else:
+          # Retreive job posting from website
+          url = extract_seek_job_url(html_content)
+          job_posting_to_pdf(email_id, url, job_postings)
 
 
   except HttpError as error:

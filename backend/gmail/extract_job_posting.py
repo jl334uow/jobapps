@@ -40,8 +40,6 @@ def job_posting_to_pdf(email_id, link, output_folder):
         
         page.wait_for_selector('h1', timeout=10000)
 
-        file = Path(f'{output_folder}/{email_id}.pdf')
-
         page.pdf(
             path = file,
             format = "A4",
