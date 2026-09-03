@@ -10,6 +10,8 @@ import base64
 from email_to_pdf import convert_email_to_pdf
 from pathlib import Path
 from extract_job_posting import extract_seek_job_url, job_posting_to_pdf
+#import json
+
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
@@ -117,7 +119,11 @@ def main():
         else:
           # Retreive job posting from website
           url = extract_seek_job_url(html_content)
-          job_posting_to_pdf(email_id, url, job_postings)
+          job_posting_to_pdf(url, job_ad)
+    # print(html_documents)
+    # # Opens 'output.txt' in write mode
+    # with open("output.json", "w", encoding="utf-8") as file:
+    #     json.dump(html_documents[0], file, indent = 4)
 
 
   except HttpError as error:
